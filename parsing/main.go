@@ -1,8 +1,16 @@
 package main
 
+import (
+	"github.com/Cyber-cicco/HTMLtoDB/config"
+	dataaccess "github.com/Cyber-cicco/HTMLtoDB/data-access"
+)
 
-const URL_RESOURCES = "../request/resources/lang/"
+
 
 func main() {
 
+    dataaccess.ParseFolders(".html", config.URL_RESOURCES, func(fileContent, filePath string) {
+
+    })
 }
+
