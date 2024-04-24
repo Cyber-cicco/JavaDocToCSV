@@ -76,7 +76,7 @@ func getTabNodes(content []byte) []*sitter.Node {
 
 func findHrefNodesFromTable(content []byte, node *sitter.Node) []string {
 	linkNodes := []*sitter.Node{}
-    links := []string{}
+	links := []string{}
 	linkNodes = querier.GetChildrenMatching(node, func(node *sitter.Node) bool {
 		isStartTag := node.Type() == "start_tag"
 		if !isStartTag {
@@ -90,16 +90,17 @@ func findHrefNodesFromTable(content []byte, node *sitter.Node) []string {
 			if node.Child(2) == nil || node.Child(2).Child(1) == nil {
 				return false
 			}
-            href := node.Child(2).Child(1).Content(content)
+			href := node.Child(2).Child(1).Content(content)
 			if strings.HasSuffix(href, ".html") {
-                links = append(links, href)
-                return true
-            }
-            return false
+				linkSep := strings.Split(href, "/")
+				links = append(links, linkSep[len(linkSep)-1])
+				return true
+			}
+			return false
 		})
 		return attribute != nil
 	}, linkNodes)
-    return links
+	return links
 }
 
 func findTitleNode(content []byte, node *sitter.Node) *sitter.Node {
