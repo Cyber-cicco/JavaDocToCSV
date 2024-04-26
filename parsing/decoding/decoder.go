@@ -2,7 +2,6 @@ package decoding
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strings"
 
@@ -51,9 +50,25 @@ func ParseSingleFile(content []byte, filePath string) {
 func parseFields(tree *sitter.Tree, content []byte, className string) {
 
 	table := getFieldNode(tree, content)
-	fmt.Printf("table: %v\n", table)
+
+    rows := getRows(table, content)
 }
 
+func getRows(table *sitter.Node, content []byte) []*sitter.Node {
+
+    nodes := []*sitter.Node{}
+
+    querier.GetChildrenMatching(table, func(n *sitter.Node) bool {
+        isEl := n.Type() == "element"
+        if !isEl {
+            return false
+        }
+        tr := 
+    }, nodes)
+
+    return nodes
+
+}
 func getFieldNode(tree *sitter.Tree, content []byte) *sitter.Node {
 
 	qb := querier.NewPQ(PQ_TABLE)
