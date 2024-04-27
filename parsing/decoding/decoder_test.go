@@ -10,7 +10,7 @@ import (
 
 func TestParseFields(t *testing.T) {
     content := initTest(t)
-    tree, err := parser.ParseCtx(context.Background(), nil, content)
+    tree, err := Parser.ParseCtx(context.Background(), nil, content)
 
     if err != nil {
         t.Fatalf("Shouldn't have had error, got %s", err)

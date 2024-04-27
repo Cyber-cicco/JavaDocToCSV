@@ -10,8 +10,8 @@ import (
 	"github.com/smacker/go-tree-sitter/html"
 )
 
-var lang *sitter.Language
-var parser *sitter.Parser
+var Lang *sitter.Language
+var Parser *sitter.Parser
 
 type Method struct {
 	Modifier      bool
@@ -28,14 +28,14 @@ type Field struct {
 }
 
 func init() {
-	lang = html.GetLanguage()
-	parser = sitter.NewParser()
-	parser.SetLanguage(lang)
+	Lang = html.GetLanguage()
+	Parser = sitter.NewParser()
+	Parser.SetLanguage(Lang)
 }
 
 func ParseSingleFile(content []byte, filePath string) {
 
-	tree, err := parser.ParseCtx(context.Background(), nil, content)
+	tree, err := Parser.ParseCtx(context.Background(), nil, content)
 
 	if err != nil {
 		log.Fatalf("got error %s", err)
@@ -51,7 +51,7 @@ func parseFields(tree *sitter.Tree, content []byte, className string) {
 
 	table := getFieldNode(tree, content)
 
-    rows := getRows(table, content)
+    getRows(table, content)
 }
 
 func getRows(table *sitter.Node, content []byte) []*sitter.Node {
@@ -63,12 +63,13 @@ func getRows(table *sitter.Node, content []byte) []*sitter.Node {
         if !isEl {
             return false
         }
-        tr := 
+        return false
     }, nodes)
 
     return nodes
 
 }
+
 func getFieldNode(tree *sitter.Tree, content []byte) *sitter.Node {
 
 	qb := querier.NewPQ(PQ_TABLE)
@@ -79,7 +80,7 @@ func getFieldNode(tree *sitter.Tree, content []byte) *sitter.Node {
 		log.Fatalf("got error %s", err)
 	}
 
-	query.Lang = lang
+	query.Lang = Lang
 	query.Content = content
 	query.Tree = tree
 	var node *sitter.Node
