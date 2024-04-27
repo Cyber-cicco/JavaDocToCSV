@@ -2,6 +2,7 @@ package scrapper
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/Cyber-cicco/tree-sitter-query-builder/querier"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -26,8 +27,8 @@ type DOMStructure struct {
 }
 
 type Selectable interface {
-	QuerySelector(selector string) *DOMElement
-	QuerySelectorAll(selector string) []*DOMElement
+	QuerySelector(selector string) (*DOMElement, bool)
+	QuerySelectorAll(selector string) ([]*DOMElement, bool)
 }
 
 func ToDOM(n *sitter.Node, content []byte) (*DOMStructure, error) {
@@ -49,31 +50,74 @@ func (s *DOMStructure) QuerySelector(query string) (*DOMElement, bool) {
 	var element *sitter.Node
 
 	if len(query) == 0 {
-		return nil, true
+		return nil, false
 	}
 
 	selector, err := parseSelector(query)
 
 	if err != nil {
-		return nil, true
+		return nil, false
 	}
 
 	switch selector.sType {
 
 	case ST_BASE:
 		element = querier.GetFirstMatch(s.RootNode, func(n *sitter.Node) bool {
-            isEl := n.Type() == "element"
-            if !isEl {
-                return false
-            }
-			return n.Child(0).Child(1).Content(s.content) == selector.matched
+			isEl := n.Type() == "element"
+
+			if !isEl {
+				return false
+			}
+
+			return getTagName(n, s.content) == selector.matched
 		})
+
+	case ST_ID:
+		element = querier.GetFirstMatch(s.RootNode, func(n *sitter.Node) bool {
+			return elementWithAttributeEquals(n, "id", selector.matched, s.content)
+		}).Parent()
+
+	case ST_CLASS:
+        fmt.Println("here")
+		element = querier.GetFirstMatch(s.RootNode, func(n *sitter.Node) bool {
+			return elementWithAttributeEquals(n, "class", selector.matched, s.content)
+		}).Parent()
 	}
 
 	return &DOMElement{
 		Node:     element,
 		document: s,
 	}, element != nil
+}
+
+func elementWithAttributeEquals(n *sitter.Node, attributeName, matched string, content []byte) bool {
+
+	isEl := n.Type() == "start_tag"
+
+	if !isEl {
+		return false
+	}
+
+	el := querier.GetFirstMatch(n, func(n *sitter.Node) bool {
+		return attributeEquals(n, attributeName, matched, content)
+	})
+
+	return el != nil
+}
+
+func attributeEquals(n *sitter.Node, attributeName, matched string, content []byte) bool {
+
+	isSeachedAttribute := n.Type() == "attribute" && n.Child(0) != nil && n.Child(0).Content(content) == attributeName
+
+	if !isSeachedAttribute {
+		return false
+	}
+
+	if n.Child(2) == nil || n.Child(2).Child(1) == nil {
+		return false
+	}
+
+	return n.Child(2).Child(1).Content(content) == matched
 }
 
 type selector struct {
@@ -137,7 +181,11 @@ func (s *DOMElement) InnerHTML() *sitter.Node {
 }
 
 func (s *DOMElement) TagName() string {
-	return s.Node.Child(0).Child(1).Content(s.document.content)
+	return getTagName(s.Node, s.document.content)
+}
+
+func getTagName(n *sitter.Node, content []byte) string {
+	return n.Child(0).Child(1).Content(content)
 }
 
 func (s *DOMElement) GetClass() string {
