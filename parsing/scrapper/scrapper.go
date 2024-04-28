@@ -41,11 +41,81 @@ func ToDOM(n *sitter.Node, content []byte) (*DOMStructure, error) {
 	return nil, errors.New("node is not an HTML element")
 }
 
-func (s *DOMElement) QuerySelector(query string) *DOMElement {
-	return nil
+func (s *DOMStructure) QuerySelector(query string) (*DOMElement, bool) {
+	return querySelector(query, s.RootNode, s.content, s)
 }
 
-func (s *DOMStructure) QuerySelector(query string) (*DOMElement, bool) {
+func (s *DOMElement) QuerySelector(query string) (*DOMElement, bool) {
+	return querySelector(query, s.Node, s.document.content, s.document)
+}
+
+func (s *DOMStructure) QuerySelectorAll(query string) ([]*DOMElement, bool) {
+	return querySelectorAll(query, s.RootNode, s.content, s)
+}
+
+func (s *DOMElement) QuerySelectorAll(query string) ([]*DOMElement, bool) {
+	return querySelectorAll(query, s.Node, s.document.content, s.document)
+}
+
+func querySelectorAll(query string, rootNode *sitter.Node, content []byte, s *DOMStructure) ([]*DOMElement, bool) {
+
+    nodes := []*sitter.Node{}
+
+	if len(query) == 0 {
+		return nil, false
+	}
+
+	selector, err := parseSelector(query)
+
+	if err != nil {
+		return nil, false
+	}
+
+	switch selector.sType {
+
+	case ST_BASE:
+		nodes = querier.GetChildrenMatching(rootNode, func(n *sitter.Node) bool {
+			isEl := n.Type() == "element"
+
+			if !isEl {
+				return false
+			}
+
+			return getTagName(n, content) == selector.matched
+		}, nodes)
+
+	case ST_ID:
+		nodes = querier.GetChildrenMatching(rootNode, func(n *sitter.Node) bool {
+			return elementWithAttributeEquals(n, "id", selector.matched, content)
+		}, nodes)
+
+	case ST_CLASS:
+		nodes = querier.GetChildrenMatching(rootNode, func(n *sitter.Node) bool {
+			return elementWithAttributeEquals(n, "class", selector.matched, content)
+		}, nodes)
+	}
+
+    elements := make([]*DOMElement, len(nodes)) 
+    
+    for i, node := range nodes {
+
+        if selector.sType == ST_CLASS || selector.sType == ST_ID {
+            elements[i] = &DOMElement{
+            	Node:     node.Parent(),
+            	document: s,
+            }
+        } else {
+            elements[i] = &DOMElement{
+            	Node:     node,
+            	document: s,
+            }
+        }
+    }
+
+    return elements, true
+}
+
+func querySelector(query string, rootNode *sitter.Node, content []byte, s *DOMStructure) (*DOMElement, bool) {
 
 	var element *sitter.Node
 
@@ -62,24 +132,24 @@ func (s *DOMStructure) QuerySelector(query string) (*DOMElement, bool) {
 	switch selector.sType {
 
 	case ST_BASE:
-		element = querier.GetFirstMatch(s.RootNode, func(n *sitter.Node) bool {
+		element = querier.GetFirstMatch(rootNode, func(n *sitter.Node) bool {
 			isEl := n.Type() == "element"
 
 			if !isEl {
 				return false
 			}
 
-			return getTagName(n, s.content) == selector.matched
+			return getTagName(n, content) == selector.matched
 		})
 
 	case ST_ID:
-		element = querier.GetFirstMatch(s.RootNode, func(n *sitter.Node) bool {
-			return elementWithAttributeEquals(n, "id", selector.matched, s.content)
+		element = querier.GetFirstMatch(rootNode, func(n *sitter.Node) bool {
+			return elementWithAttributeEquals(n, "id", selector.matched, content)
 		}).Parent()
 
 	case ST_CLASS:
-		element = querier.GetFirstMatch(s.RootNode, func(n *sitter.Node) bool {
-			return elementWithAttributeEquals(n, "class", selector.matched, s.content)
+		element = querier.GetFirstMatch(rootNode, func(n *sitter.Node) bool {
+			return elementWithAttributeEquals(n, "class", selector.matched, content)
 		}).Parent()
 	}
 
@@ -87,6 +157,7 @@ func (s *DOMStructure) QuerySelector(query string) (*DOMElement, bool) {
 		Node:     element,
 		document: s,
 	}, element != nil
+
 }
 
 func elementWithAttributeEquals(n *sitter.Node, attributeName, matched string, content []byte) bool {
@@ -157,36 +228,28 @@ func parseSelector(query string) (selector, error) {
 	}
 }
 
-func (s *DOMStructure) QuerySelectorAll(selector string) []*sitter.Node {
-	return nil
-}
-
-func (s *DOMElement) QuerySelectorAll(selector string) []*sitter.Node {
-	return nil
-}
-
 func (s *DOMElement) InnerText() []byte {
 
-    var buffer bytes.Buffer
-    nodes := []*sitter.Node{}
-    nodes = querier.GetChildrenMatching(s.Node, func(n *sitter.Node) bool {
-        return n.Type() == "text" || n.Type() == "entity"
-    }, nodes)
+	var buffer bytes.Buffer
+	nodes := []*sitter.Node{}
+	nodes = querier.GetChildrenMatching(s.Node, func(n *sitter.Node) bool {
+		return n.Type() == "text" || n.Type() == "entity"
+	}, nodes)
 
-    for _, match := range nodes {
+	for _, match := range nodes {
 
-        if match.Type() == "text" {
-            buffer.Write([]byte(match.Content(s.document.content)))
-        }
+		if match.Type() == "text" {
+			buffer.Write([]byte(match.Content(s.document.content)))
+		}
 
-        if match.Type() == "entity" {
-            char, ok := specialChars[match.Content(s.document.content)]
-            if !ok {
-                continue
-            }
-            buffer.Write([]byte{char})
-        }
-    }
+		if match.Type() == "entity" {
+			char, ok := specialChars[match.Content(s.document.content)]
+			if !ok {
+				continue
+			}
+			buffer.Write([]byte{char})
+		}
+	}
 
 	return buffer.Bytes()
 }
@@ -201,8 +264,4 @@ func (s *DOMElement) TagName() string {
 
 func getTagName(n *sitter.Node, content []byte) string {
 	return n.Child(0).Child(1).Content(content)
-}
-
-func (s *DOMElement) GetClass() string {
-	return ""
 }

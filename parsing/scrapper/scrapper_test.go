@@ -79,6 +79,28 @@ func TestQuerySelector(t *testing.T) {
 	}
 }
 
+func TestQuerySelectorAll(t *testing.T) {
+
+	content := initTest(t)
+	tree, err := decoding.Parser.ParseCtx(context.Background(), nil, content)
+
+	if err != nil {
+		t.Fatalf("got error %s", err)
+	}
+
+	document, err := ToDOM(tree.RootNode(), content)
+
+    nodes, ok := document.QuerySelectorAll("table")
+
+    if !ok {
+        t.Fatalf("Got nil result from QuerySelectorAll")
+    }
+
+    if len(nodes) != 4 {
+        t.Fatalf("Expected len of 5, got len of %d", len(nodes))
+    }
+}
+
 func TestInnerText(t *testing.T) {
 
 	content := initTest(t)
