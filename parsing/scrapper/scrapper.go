@@ -1,8 +1,8 @@
 package scrapper
 
 import (
+	"bytes"
 	"errors"
-	"fmt"
 
 	"github.com/Cyber-cicco/tree-sitter-query-builder/querier"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -78,7 +78,6 @@ func (s *DOMStructure) QuerySelector(query string) (*DOMElement, bool) {
 		}).Parent()
 
 	case ST_CLASS:
-        fmt.Println("here")
 		element = querier.GetFirstMatch(s.RootNode, func(n *sitter.Node) bool {
 			return elementWithAttributeEquals(n, "class", selector.matched, s.content)
 		}).Parent()
@@ -167,17 +166,33 @@ func (s *DOMElement) QuerySelectorAll(selector string) []*sitter.Node {
 }
 
 func (s *DOMElement) InnerText() []byte {
-	innertText := []byte{}
-	return innertText
+
+    var buffer bytes.Buffer
+    nodes := []*sitter.Node{}
+    nodes = querier.GetChildrenMatching(s.Node, func(n *sitter.Node) bool {
+        return n.Type() == "text" || n.Type() == "entity"
+    }, nodes)
+
+    for _, match := range nodes {
+
+        if match.Type() == "text" {
+            buffer.Write([]byte(match.Content(s.document.content)))
+        }
+
+        if match.Type() == "entity" {
+            char, ok := specialChars[match.Content(s.document.content)]
+            if !ok {
+                continue
+            }
+            buffer.Write([]byte{char})
+        }
+    }
+
+	return buffer.Bytes()
 }
 
 func (s *DOMElement) ToString() string {
 	return s.Node.Content(s.document.content)
-}
-
-func (s *DOMElement) InnerHTML() *sitter.Node {
-	innerHtml := &sitter.Node{}
-	return innerHtml
 }
 
 func (s *DOMElement) TagName() string {
