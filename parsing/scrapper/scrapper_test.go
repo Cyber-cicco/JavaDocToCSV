@@ -1,4 +1,4 @@
-package scrapper
+package scrapper_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/Cyber-cicco/HTMLtoDB/config"
 	"github.com/Cyber-cicco/HTMLtoDB/decoding"
+	"github.com/Cyber-cicco/HTMLtoDB/scrapper"
 )
 
 const DIV_1 = "<div>JavaScript is disabled on your browser.</div>"
@@ -27,13 +28,13 @@ func TestDOMStructure(t *testing.T) {
 		t.Fatalf("got error %s", err)
 	}
 
-	_, err = ToDOM(tree.RootNode(), content)
+	_, err = scrapper.ToDOM(tree.RootNode(), content)
 
 	if err != nil {
 		t.Fatalf("got error %s", err)
 	}
 
-	_, err = ToDOM(tree.RootNode().Child(0), content)
+	_, err = scrapper.ToDOM(tree.RootNode().Child(0), content)
 
 	if err == nil {
 		t.Fatalf("Expected error, got nil")
@@ -50,7 +51,7 @@ func TestQuerySelector(t *testing.T) {
 		t.Fatalf("got error %s", err)
 	}
 
-	document, err := ToDOM(tree.RootNode(), content)
+	document, err := scrapper.ToDOM(tree.RootNode(), content)
 
 	div1, ok := document.QuerySelector("div")
 
@@ -88,7 +89,7 @@ func TestQuerySelectorAll(t *testing.T) {
 		t.Fatalf("got error %s", err)
 	}
 
-	document, err := ToDOM(tree.RootNode(), content)
+	document, err := scrapper.ToDOM(tree.RootNode(), content)
 
     nodes, ok := document.QuerySelectorAll("table")
 
@@ -110,7 +111,7 @@ func TestInnerText(t *testing.T) {
 		t.Fatalf("got error %s", err)
 	}
 
-	document, err := ToDOM(tree.RootNode(), content)
+	document, err := scrapper.ToDOM(tree.RootNode(), content)
 	div1, ok := document.QuerySelector("div")
 
 	if !ok {
@@ -133,8 +134,27 @@ func TestInnerText(t *testing.T) {
 	}
 }
 
+func TestAppendingWS(t *testing.T) {
+	content := []byte(`<td class="colFirst"><code>static <a href="../../java/lang/ProcessBuilder.Redirect.html" title="class in java.lang">ProcessBuilder.Redirect</a></code></td>`)
+	tree, err := decoding.Parser.ParseCtx(context.Background(), nil, content)
+
+	if err != nil {
+		t.Fatalf("got error %s", err)
+	}
+
+	document, err := scrapper.ToDOM(tree.RootNode(), content)
+
+    td, ok := document.QuerySelector("td")
+
+    if !ok {
+		t.Fatalf("got nil %v", td)
+    }
+
+    td.InnerText()
+}
+
 func initTest(t *testing.T) []byte {
-	path := config.URL_RESOURCES + "Class/Float.html"
+	path := config.URL_RESOURCES_TEST + "Class/Float.html"
 	content, err := os.ReadFile(path)
 
 	if err != nil {
@@ -143,3 +163,4 @@ func initTest(t *testing.T) []byte {
 
 	return content
 }
+

@@ -32,7 +32,7 @@ type Selectable interface {
 }
 
 func ToDOM(n *sitter.Node, content []byte) (*DOMStructure, error) {
-	if n.Type() == "document" {
+	if n.Type() == "document" || n.Type() == "element" {
 		return &DOMStructure{
 			RootNode: n,
 			content:  content,
@@ -239,7 +239,15 @@ func (s *DOMElement) InnerText() []byte {
 	for _, match := range nodes {
 
 		if match.Type() == "text" {
-			buffer.Write([]byte(match.Content(s.document.content)))
+            toWrite := []byte(match.Content(s.document.content))
+            toWrite = trimLargeWhitespacesAndDeleteCR(toWrite)
+            if match.StartByte() > 0 && s.document.content[match.StartByte()-1] == ' ' {
+                toWrite = append([]byte{' '}, toWrite...)
+            }
+            if match.EndByte() < uint32(len(s.document.content)) && s.document.content[match.EndByte()] == ' ' {
+                toWrite = append(toWrite, ' ')
+            }
+			buffer.Write(toWrite)
 		}
 
 		if match.Type() == "entity" {
@@ -252,6 +260,19 @@ func (s *DOMElement) InnerText() []byte {
 	}
 
 	return buffer.Bytes()
+}
+
+func trimLargeWhitespacesAndDeleteCR(in []byte) []byte {
+    out := make([]byte, len(in))
+    lastWasWS := false
+    for i := 0; i < len(in); i++ {
+        if (lastWasWS && in[i] == ' ') || in[i] == '\n' || in[i] == '\r' {
+            continue
+        }
+        lastWasWS = in[i] == ' '
+        out = append(out,in[i])
+    }
+    return out
 }
 
 func (s *DOMElement) ToString() string {

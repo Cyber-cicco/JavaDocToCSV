@@ -9,4 +9,5 @@ func init() {
 	specialChars["&nbsp;"] = ' '
 	specialChars["&lt;"] = '<'
 	specialChars["&gt;"] = '>'
+	specialChars["&middot;"] = '·'
 }
