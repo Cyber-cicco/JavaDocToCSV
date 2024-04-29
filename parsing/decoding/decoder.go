@@ -49,6 +49,7 @@ func ParseSingleFile(content []byte, filePath string) {
 
 	parseTable(tree, content, className, "Field Summary", "fields")
 	parseTable(tree, content, className, "Method Summary", "methods")
+	parseEnumConstants(tree, content, className)
 
 }
 
@@ -62,7 +63,6 @@ func parseTable(tree *sitter.Tree, content []byte, className, text, suffix strin
         return
     }
 
-    fmt.Printf("className: %v\n", className)
 	rows, err := getRows(table, content)
 	if err != nil {
 		panic(err)
@@ -143,4 +143,38 @@ func getTextNode(tree *sitter.Tree, content []byte, text string) (*sitter.Node, 
 
 func parseEnumConstants(tree *sitter.Tree, content []byte, className string) {
 
+	var buffer bytes.Buffer
+	table, ok := getTextNode(tree, content, "Enum Constant Summary")
+
+    //return if there is no field summary
+    if !ok {
+        return
+    }
+
+    fmt.Printf("enum: %v\n", className)
+	rows, err := getRows(table, content)
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, row := range rows {
+		//Type of the field
+		colfirst, ok := row.QuerySelector(".colOne")
+		if !ok {
+			log.Fatalf("got nil result from querySelector")
+		}
+
+		code, ok := colfirst.QuerySelector("code")
+		buffer.Write(code.InnerText())
+		buffer.Write([]byte{';'})
+
+        //Documentation of the field
+		block, ok := colfirst.QuerySelector(".block")
+		buffer.Write(block.InnerText())
+		buffer.Write([]byte{';', '\n'})
+
+	}
+
+    fmt.Printf("%v\n", string(buffer.Bytes()))
 }

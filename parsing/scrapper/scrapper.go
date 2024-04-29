@@ -145,12 +145,18 @@ func querySelector(query string, rootNode *sitter.Node, content []byte, s *DOMSt
 	case ST_ID:
 		element = querier.GetFirstMatch(rootNode, func(n *sitter.Node) bool {
 			return elementWithAttributeEquals(n, "id", selector.matched, content)
-		}).Parent()
+		})
+        if element != nil && element.Parent() != nil {
+            element = element.Parent()
+        }
 
 	case ST_CLASS:
 		element = querier.GetFirstMatch(rootNode, func(n *sitter.Node) bool {
 			return elementWithAttributeEquals(n, "class", selector.matched, content)
-		}).Parent()
+		})
+        if element != nil && element.Parent() != nil {
+            element = element.Parent()
+        }
 	}
 
 	return &DOMElement{
