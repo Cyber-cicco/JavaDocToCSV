@@ -47,14 +47,15 @@ func ParseSingleFile(content []byte, filePath string) {
 
 	className := strings.TrimSuffix(filePath, ".html")
 
-	parseFields(tree, content, className)
+	parseTable(tree, content, className, "Field Summary", "fields")
+	parseTable(tree, content, className, "Method Summary", "methods")
 
 }
 
-func parseFields(tree *sitter.Tree, content []byte, className string) {
+func parseTable(tree *sitter.Tree, content []byte, className, text, suffix string) {
 
 	var buffer bytes.Buffer
-	table, ok := getFieldNode(tree, content)
+	table, ok := getTextNode(tree, content, text)
 
     //return if there is no field summary
     if !ok {
@@ -116,10 +117,10 @@ func getRows(table *sitter.Node, content []byte) ([]*scrapper.DOMElement, error)
 
 }
 
-func getFieldNode(tree *sitter.Tree, content []byte) (*sitter.Node, bool) {
+func getTextNode(tree *sitter.Tree, content []byte, text string) (*sitter.Node, bool) {
 
 	qb := querier.NewPQ(PQ_TABLE)
-	qb.AddValue("text", "Field Summary")
+	qb.AddValue("text",text)
 	query, err := qb.GetQuery()
 
 	if err != nil {
@@ -138,10 +139,6 @@ func getFieldNode(tree *sitter.Tree, content []byte) (*sitter.Node, bool) {
 	})
 
 	return node, node != nil
-}
-
-func parseMethods(tree *sitter.Tree, content []byte, className string) {
-
 }
 
 func parseEnumConstants(tree *sitter.Tree, content []byte, className string) {

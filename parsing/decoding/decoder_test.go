@@ -16,7 +16,7 @@ func TestParseFields(t *testing.T) {
         t.Fatalf("Shouldn't have had error, got %s", err)
     }
     
-    _, ok := getFieldNode(tree, content)
+    _, ok := getTextNode(tree, content)
 
     if !ok {
         t.Fatalf("Expected a value, got nil")
