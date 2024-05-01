@@ -1,13 +1,14 @@
 package decoding
 
 import (
-	"bytes"
+	"bufio"
 	"context"
 	"errors"
-	"fmt"
 	"log"
+	"os"
 	"strings"
 
+	"github.com/Cyber-cicco/HTMLtoDB/config"
 	"github.com/Cyber-cicco/HTMLtoDB/scrapper"
 	"github.com/Cyber-cicco/tree-sitter-query-builder/querier"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -55,13 +56,17 @@ func ParseSingleFile(content []byte, filePath string) {
 
 func parseTable(tree *sitter.Tree, content []byte, className, text, suffix string) {
 
-	var buffer bytes.Buffer
 	table, ok := getTextNode(tree, content, text)
 
     //return if there is no field summary
     if !ok {
         return
     }
+
+    filename := config.URL_CSVS + className + "." + suffix + ".csv"
+    f, err := os.Create(filename)
+    defer f.Close()
+    buffer := bufio.NewWriter(f)
 
 	rows, err := getRows(table, content)
 	if err != nil {
@@ -74,7 +79,6 @@ func parseTable(tree *sitter.Tree, content []byte, className, text, suffix strin
 		if !ok {
 			log.Fatalf("got nil result from querySelector")
 		}
-
 		buffer.Write(colfirst.InnerText())
 		buffer.Write([]byte{';'})
 
@@ -93,8 +97,9 @@ func parseTable(tree *sitter.Tree, content []byte, className, text, suffix strin
 		buffer.Write([]byte{';', '\n'})
 
 	}
-
-    fmt.Printf("%v\n", string(buffer.Bytes()))
+    if err = buffer.Flush(); err != nil {
+        panic(err)
+    }
 }
 
 func getRows(table *sitter.Node, content []byte) ([]*scrapper.DOMElement, error) {
@@ -143,7 +148,6 @@ func getTextNode(tree *sitter.Tree, content []byte, text string) (*sitter.Node, 
 
 func parseEnumConstants(tree *sitter.Tree, content []byte, className string) {
 
-	var buffer bytes.Buffer
 	table, ok := getTextNode(tree, content, "Enum Constant Summary")
 
     //return if there is no field summary
@@ -151,7 +155,11 @@ func parseEnumConstants(tree *sitter.Tree, content []byte, className string) {
         return
     }
 
-    fmt.Printf("enum: %v\n", className)
+    filename := config.URL_CSVS + className + ".enum.csv"
+    f, err := os.Create(filename)
+    defer f.Close()
+    buffer := bufio.NewWriter(f)
+
 	rows, err := getRows(table, content)
 
 	if err != nil {
@@ -166,15 +174,17 @@ func parseEnumConstants(tree *sitter.Tree, content []byte, className string) {
 		}
 
 		code, ok := colfirst.QuerySelector("code")
-		buffer.Write(code.InnerText())
-		buffer.Write([]byte{';'})
+		buffer.WriteString(string(code.InnerText()))
+		buffer.WriteString(";")
 
         //Documentation of the field
 		block, ok := colfirst.QuerySelector(".block")
-		buffer.Write(block.InnerText())
-		buffer.Write([]byte{';', '\n'})
+		buffer.WriteString(string(block.InnerText()))
+		buffer.WriteString(";\n")
 
 	}
+    if err = buffer.Flush(); err != nil {
+        panic(err)
+    }
 
-    fmt.Printf("%v\n", string(buffer.Bytes()))
 }

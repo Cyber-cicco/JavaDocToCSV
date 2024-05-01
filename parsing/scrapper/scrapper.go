@@ -265,11 +265,11 @@ func (s *DOMElement) InnerText() []byte {
 		}
 	}
 
-	return buffer.Bytes()
+    return buffer.Bytes()
 }
 
 func trimLargeWhitespacesAndDeleteCR(in []byte) []byte {
-    out := make([]byte, len(in))
+    out := []byte{}
     lastWasWS := false
     for i := 0; i < len(in); i++ {
         if (lastWasWS && in[i] == ' ') || in[i] == '\n' || in[i] == '\r' {
